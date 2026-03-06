@@ -67,8 +67,9 @@ try:
                 {
                     "token": "GG", # 用户的token
                     "allowance": 1000, # 调用次数配额,到某一时刻将'total_uses'重新设置为设定的配额
-                    "storage_limit": 2048, # 存储限制大小(mb),预设是2gb
                     "total_uses": 1000, # 可用次数,一段时间内可以调用的次数
+                    "RtCVS_limit": 2, # 实时同步云变量限制大小(mb),预设是2MB
+                    "storage_limit": 2048, # 存储限制大小(mb),预设是2gb
                     "project_name": "共用账户", # 用户申请凭证时写的使用项目名
                     "created_time": 1770626390.8700256, # 账户创建时间(供机器阅读的)
                     "H_created_time": "2010.10.01/16:39:50", # 账户创建时间(供人阅读的)
@@ -77,6 +78,12 @@ try:
                     "contact_email": "c", # 申请人的邮箱,方便以后的交流
                     "total_calls": 0, # 累计已经调用过多少次
                     "used_storage": 0, # 已用的空间,单位MB,这个仅方便查看一个项目的使用量
+                    "permissions":{ # 权限
+                        "read": True, # 读取数据
+                        "write": True, # 写入数据
+                        "delete": True, # 删除数据
+                        "cv_write": True, # 使用云变量上传数据服务
+                    }
                 }
             ]
             f.write(json.dumps(示例, ensure_ascii=False, indent=2))
@@ -140,7 +147,8 @@ def 获取目录大小(路径):
                 总字节 += 获取目录大小(entry.path)
         return 总字节
     except Exception as e:
-        rizhi.warning(f"[目录占用计算函数]发生了错误但为了保证运行正常忽略|ERROR:'{e}'")
+        # 在该环境下提示报错不是一个好方法,这会让我看到错误感到焦虑
+        # rizhi.warning(f"[目录占用计算函数]发生了错误但为了保证运行正常忽略|ERROR:'{e}'")
         return 0
 
 Client = {
@@ -275,12 +283,14 @@ class MyServer(WebSocket):
                         rizhi.info(f"[REMOVE]客户端({self.address}|{该用户的UAT["token"]})进行了删除数据|数据名'{接收数据_value}'")
                     # ---------实时同步云变量部分(RtCVS/CV)_数据操作---------
                     if 接收数据_key in ["CV_dump","CV_write","CV_w"]:
+                        需要减少可用次数 = False
                         if 该用户的UAT["token"] not in RtCVS:
                             RtCVS[该用户的UAT["token"]] = {}
                         rizhi.info(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})上传了CV数据|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
-                        if len(str(json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False)).encode('utf-8')) < 32*1024:
+                        if len(str(json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False)).encode('utf-8')) < 2*1024*1024: # 默认给于2MB的数据
                             RtCVS[该用户的UAT["token"]][接收数据_value[0]] = 接收数据_value[1]
                             rizhi.info(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})成功存储or修改数据|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
+                            # 为所有同token的type类型为"RtCVS"的客户端播报
                             i = 0
                             for 目标 in Client["type"]["RtCVS"][该用户的UAT["token"]]:
                                 i += 1
@@ -289,7 +299,7 @@ class MyServer(WebSocket):
                         else:
                             rizhi.warning(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})因整体数据大于32MB导致数据被忽略|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
                     # ---------客户端查阅信息---------
-                    if 接收数据_key == "i_sever":  # 查看服务器性能占用
+                    if 接收数据_key == "i_server":  # 查看服务器性能占用
                         需要减少可用次数 = False
                         性能_CPU占用 = psutil.cpu_percent(interval=0.5)
                         性能_物理内存占用 = psutil.virtual_memory().percent
@@ -303,6 +313,7 @@ class MyServer(WebSocket):
                         }
                         信息 = json.dumps(信息, ensure_ascii=False, indent=2)
                         self.sendMessage(信息)
+                        rizhi.info(f"[i_server]客户端({self.address}|{该用户的UAT["token"]})进行了查看'server'状态信息\n'{信息}'")
                     if 接收数据_key == "i_me":  # 查看自己账号的一些信息
                         需要减少可用次数 = False
                         信息 = {
@@ -316,8 +327,10 @@ class MyServer(WebSocket):
                         }
                         信息 = json.dumps(信息, ensure_ascii=False, indent=2)
                         self.sendMessage(信息)
+                        rizhi.info(f"[i_me]客户端({self.address}|{该用户的UAT["token"]})进行了查看'UAT账户'状态信息\n'{信息}'")
                     if 接收数据_key == "i_tos":  # 查看免责声明
                         self.sendMessage(欢迎语)
+                        rizhi.info(f"[i_tos]客户端({self.address}|{该用户的UAT["token"]})进行了查看tos信息")
             except Exception as e:
                 rizhi.warning(f"客户端({self.address})可能发送了无用或错误的信息导致处理失败|原始数据{self.data}|错误:{e}")
 
