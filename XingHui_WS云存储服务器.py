@@ -9,7 +9,7 @@ import gc
 import psutil
 import random
 
-服务器版本 = "0.1.2"
+服务器版本 = "0.1.3"
 服务器版本更新内容 = [
     "0.0.1_作者大脑褶皱被抚平🧠✋突然想做个主要面向图形化编程的好用的云存储,并打算用那微薄的python知识随便写一个MVP"
     "~0.0.4_刚完成正常功能,完成基础WS服务器+存储逻辑",
@@ -20,7 +20,8 @@ import random
     "0.0.9_改了一个文本和数据检查",
     "0.1.0_修改了用户查看账户状态时'您还可用(MB)'的浮点精度问题",
     "0.1.1_修复了逻辑漏洞(全新的UAT账户初次调用时,因对应的数据目录尚未创建,在计算存储占用时触发了“系统找不到指定路径”的WinError错误)",
-    "0.1.2_做完了第一个BETA版本的RtCVS功能,但还有bug或许需要修一修"
+    "0.1.2_做完了第一个BETA版本的RtCVS功能,但还有bug或许需要修一修",
+    "0.1.3_修复了'路径遍历攻击'漏洞;我的天十分抱歉我的电脑基础知识不够,已经修复了(QMQ没人说过还有回退路径这个玩法啊...eee)"
 ]
 欢迎语 = '''~~~欢迎语👏and免责约言~~~
 欢迎接入星辉服务器！储纳之用，分文不取。诸君数据，必守秘如瓶。然稳妥计，还望自备密文加密之法为善。
@@ -159,7 +160,7 @@ Client = {
     },
 }
 RtCVS = {}
-
+文件名黑名单 = ["/","\\",".","~"]
 class MyServer(WebSocket):
     def handleConnected(self): # 连接时触发
         rizhi.info(f"[Connected]有新的客户端连接|客户端'{self.address}'")
@@ -248,6 +249,9 @@ class MyServer(WebSocket):
                     # ---------云存储部分_数据基础操作---------
                     if 接收数据_key in ["dump","write","w"]:  # 存储文件
                         dump_文件名 = 接收数据_value[0]
+                        for 字符 in dump_文件名:
+                            if 字符 in 文件名黑名单:
+                                raise ValueError(f"客户端可能试图进行路径遍历(路径回退上一级漏洞)攻击(字符'{字符}'包含在'{文件名黑名单}'中)")
                         dump_数据 = 接收数据_value[1]
                         if len(str(dump_数据).encode('utf-8')) < 该用户的UAT["storage_limit"]*1024*1024 - 该用户的UAT["used_storage"]*1024*1024:
                             os.makedirs(f"{数据目录}/{该用户的UAT["token"]}", exist_ok=True)
@@ -271,6 +275,9 @@ class MyServer(WebSocket):
                             self.sendMessage(json.dumps({"ERROR":理由}, indent=2, ensure_ascii=False))
                             rizhi.warning(f"[DUMP_ERROR]{理由}")
                     if 接收数据_key in ["load","read","r"]:  # 读取文件
+                        for 字符 in 接收数据_value:
+                            if 字符 in 文件名黑名单:
+                                raise ValueError(f"客户端可能试图进行路径遍历(路径回退上一级漏洞)攻击(字符'{字符}'包含在'{文件名黑名单}'中)")
                         with open(f"{数据目录}/{该用户的UAT["token"]}/{接收数据_value}.txt", "r", encoding="utf-8") as f:
                             读取数据 = f.read()
                         self.sendMessage(读取数据)
