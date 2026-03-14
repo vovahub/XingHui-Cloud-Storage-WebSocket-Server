@@ -10,7 +10,7 @@ import gc
 import psutil
 import random
 
-服务器版本 = "0.1.4"
+服务器版本 = "0.1.5"
 服务器版本更新内容 = [
     "0.0.1_作者大脑褶皱被抚平🧠✋突然想做个主要面向图形化编程的好用的云存储,并打算用那微薄的python知识随便写一个MVP"
     "~0.0.4_刚完成正常功能,完成基础WS服务器+存储逻辑",
@@ -23,7 +23,8 @@ import random
     "0.1.1_修复了逻辑漏洞(全新的UAT账户初次调用时,因对应的数据目录尚未创建,在计算存储占用时触发了“系统找不到指定路径”的WinError错误)",
     "0.1.2_做完了第一个BETA版本的RtCVS功能,但还有bug或许需要修一修",
     "0.1.3_修复了'路径遍历攻击'漏洞;我的天十分抱歉我的电脑基础知识不够,已经修复了(QMQ没人说过还有回退路径这个玩法啊...EEE)",
-    "0.1.4_修改了UAT格式让其支持自定义权限系统并在代码中支持Ciallo～(∠・ω< )⌒☆"
+    "0.1.4_修改了UAT格式让其支持自定义权限系统并在代码中支持Ciallo～(∠・ω< )⌒☆",
+    "0.1.5_稍微修改了CV部分"
 ]
 欢迎语 = '''~~~欢迎语👏and免责约言~~~
 欢迎接入星辉服务器！储纳之用，分文不取。诸君数据，必守秘如瓶。然稳妥计，还望自备密文加密之法为善。
@@ -312,7 +313,7 @@ class MyServer(WebSocket):
                         if 该用户的UAT["token"] not in RtCVS:
                             RtCVS[该用户的UAT["token"]] = {}
                         rizhi.info(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})上传了CV数据|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
-                        if len(str(json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False)).encode('utf-8')) < 2*1024*1024: # 默认给于2MB的数据
+                        if len(str(json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False)).encode('utf-8')) + len(str(接收数据_value[1]).encode('utf-8')) < 该用户的UAT["RtCVS_limit"]*1024*1024: # 检查是否符合大小
                             RtCVS[该用户的UAT["token"]][接收数据_value[0]] = 接收数据_value[1]
                             rizhi.info(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})成功存储or修改数据|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
                             # 为所有同token的type类型为"RtCVS"的客户端播报
@@ -370,7 +371,7 @@ class MyServer(WebSocket):
             with open(f"{配置目录}/UAT.json", 'w', encoding='utf-8') as f:
                 f.write(json.dumps(UAT, indent=2, ensure_ascii=False))
         except Exception as e:
-            rizhi.warning(f"客户端({self.address})可能发送了无用或错误的信息导致处理失败|原始数据{self.data}|错误:{e}")
+            rizhi.warning(f"客户端({self.address})可能发送了无用或错误的信息导致处理失败,但是触发了最底层的except,这或许意味着有奇怪的错误导致了本身逻辑问题|原始数据{self.data}|错误:{e}")
 
 def 进程_检查并填充各UAT可用次数():
     while True:
