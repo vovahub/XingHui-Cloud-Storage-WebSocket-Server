@@ -10,7 +10,8 @@ import gc
 import psutil
 import random
 
-服务器版本 = "0.1.5"
+GUI = True
+服务器版本 = "0.1.6"
 服务器版本更新内容 = [
     "0.0.1_作者大脑褶皱被抚平🧠✋突然想做个主要面向图形化编程的好用的云存储,并打算用那微薄的python知识随便写一个MVP"
     "~0.0.4_刚完成正常功能,完成基础WS服务器+存储逻辑",
@@ -24,7 +25,8 @@ import random
     "0.1.2_做完了第一个BETA版本的RtCVS功能,但还有bug或许需要修一修",
     "0.1.3_修复了'路径遍历攻击'漏洞;我的天十分抱歉我的电脑基础知识不够,已经修复了(QMQ没人说过还有回退路径这个玩法啊...EEE)",
     "0.1.4_修改了UAT格式让其支持自定义权限系统并在代码中支持Ciallo～(∠・ω< )⌒☆",
-    "0.1.5_稍微修改了CV部分"
+    "0.1.5_稍微修改了CV部分",
+    "0.1.6_开始学pyglet啦!所以随便写了一个GUI😋"
 ]
 欢迎语 = '''~~~欢迎语👏and免责约言~~~
 欢迎接入星辉服务器！储纳之用，分文不取。诸君数据，必守秘如瓶。然稳妥计，还望自备密文加密之法为善。
@@ -98,8 +100,13 @@ try:
 except Exception as e:
     print(f"初始化文件失败!{e}")
 
+日志数据 = []
+日志允许占用内存大小MB = 0.004
 class rizhi():
     def info(字符串): # 普通日志处理
+        global 日志数据
+        if len(str(json.dumps(日志数据,ensure_ascii=False)).encode('utf-8')) / 1024 / 1024 > 日志允许占用内存大小MB:
+            日志数据 = []
         时间 = datetime.now().strftime("%Y.%m.%d/%H:%M:%S")
         日志 = f"{时间} -- INFO -- {字符串}"
         print(日志)
@@ -108,8 +115,12 @@ class rizhi():
             f.write(f"{日志}\n")
         with open(f"{日志目录}/{时间_日志文件}日志_info.log", "a", encoding="utf-8") as f:
             f.write(f"{日志}\n")
+        日志数据.append(日志)
         return 日志
     def warning(字符串): # 警告处理
+        global 日志数据
+        if len(str(json.dumps(日志数据,ensure_ascii=False)).encode('utf-8')) / 1024 / 1024 > 日志允许占用内存大小MB:
+            日志数据 = []
         时间 = datetime.now().strftime("%Y.%m.%d/%H:%M:%S")
         日志 = f"{时间} -- WARNING -- {字符串}"
         print(日志)
@@ -118,6 +129,7 @@ class rizhi():
             f.write(f"{日志}\n")
         with open(f"{日志目录}/{时间_日志文件}日志_warning.log", "a", encoding="utf-8") as f:
             f.write(f"{日志}\n")
+        日志数据.append(日志)
         return 日志
 
 def 检查并填充各UAT可用次数():
@@ -156,6 +168,19 @@ def 获取目录大小(路径):
         # rizhi.warning(f"[目录占用计算函数]发生了错误但为了保证运行正常忽略|ERROR:'{e}'")
         return 0
 
+def 实时更新性能数据():
+    global 性能
+    while True:
+        性能_CPU占用 = psutil.cpu_percent(interval=1)
+        性能_物理内存占用 = psutil.virtual_memory().percent
+        性能_磁盘空间占用 = psutil.disk_usage(f"{父目录}").percent
+        性能_磁盘可用空间 = psutil.disk_usage(f"{父目录}").free / 1024 / 1024 / 1024
+        性能 = {
+            "cpu":性能_CPU占用,
+            "ram":性能_物理内存占用,
+            "disk":性能_磁盘空间占用,
+            "disk_fs":性能_磁盘可用空间
+        }
 class Permission_error(Exception):
     pass
 class Operation_exception(Exception):
@@ -327,17 +352,7 @@ class MyServer(WebSocket):
                     # ---------客户端查阅信息---------
                     if 接收数据_key == "i_server":  # 查看服务器性能占用
                         需要减少可用次数 = False
-                        性能_CPU占用 = psutil.cpu_percent(interval=0.5)
-                        性能_物理内存占用 = psutil.virtual_memory().percent
-                        性能_磁盘空间占用 = psutil.disk_usage(f"{父目录}").percent
-                        性能_磁盘可用空间 = psutil.disk_usage(f"{父目录}").free / 1024 / 1024 / 1024
-                        信息 = {
-                            "cpu_usage":性能_CPU占用,
-                            "ram_usage":性能_物理内存占用,
-                            "disk_usage":性能_磁盘空间占用,
-                            "disk_free_space":性能_磁盘可用空间
-                        }
-                        信息 = json.dumps(信息, ensure_ascii=False, indent=2)
+                        信息 = json.dumps(性能, ensure_ascii=False, indent=2)
                         self.sendMessage(信息)
                         rizhi.info(f"[i_server]客户端({self.address}|{该用户的UAT["token"]})进行了查看'server'状态信息\n'{信息}'")
                     if 接收数据_key == "i_me":  # 查看自己账号的一些信息
@@ -390,11 +405,162 @@ try:
 except Exception as e:
     rizhi.warning(f"---WS服务器启动失败!{e}---")
 
-while True:
-    # 用来安心的东西awa,自己触发GC本质没啥用
-    前_物理内存 = psutil.virtual_memory().percent
-    gc.collect()
-    time.sleep(5)
-    后_物理内存 = psutil.virtual_memory().percent
-    rizhi.info(f"[GC]触发GC完成|之前内存占用{前_物理内存}%;现内存占用{后_物理内存}%")
-    time.sleep(900)
+try:
+    Thread(target=实时更新性能数据, daemon=True).start()
+    rizhi.info(f"[--STAT--]_性能数据更新函数")
+except Exception as e:
+    rizhi.warning(f"---性能数据更新函数启动失败!{e}---")
+
+if not GUI:
+    while True:
+        # 用来安心的东西awa,自己触发GC本质没啥用
+        前_物理内存 = psutil.virtual_memory().percent
+        gc.collect()
+        time.sleep(5)
+        后_物理内存 = psutil.virtual_memory().percent
+        rizhi.info(f"[GC]触发GC完成|之前内存占用{前_物理内存}%;现内存占用{后_物理内存}%")
+        time.sleep(900)
+if GUI:
+    # 下面的所有哦部分都是GUI部分,如果不想使用可以直接把该文档最开头的'GUI'写为'False'
+    import pyglet
+    window = pyglet.window.Window(1020, 720, "XingHui_WS信息面板", resizable=True)
+    window.set_minimum_size(1020, 160) # 设置窗口最小宽高
+    window.set_maximum_size(1020, 1080) # 设置窗口最大宽高
+    @window.event
+    def on_draw():
+        window.clear()
+        pyglet.shapes.Rectangle( # 背景_日志区域
+            x=0,
+            y=0,
+            width=window.width//2,
+            height=window.height,
+            color=(255, 255, 255)
+            ).draw()
+        i = 0
+        for 日志 in 日志数据[::-1]:
+            if len(日志) > 70:
+                输出日志 = 日志[70:140]
+                pyglet.text.Label( # 显示服务器日志
+                    输出日志,
+                    x=3,
+                    y=15 * i + 3,
+                    color=(0, 0, 0),
+                    font_size=9
+                    ).draw()
+                i += 1
+                输出日志 = 日志[:70]
+                pyglet.text.Label( # 显示服务器日志
+                    输出日志,
+                    x=3,
+                    y=15 * i + 3,
+                    color=(0, 0, 0),
+                    font_size=9
+                    ).draw()
+            else:
+                输出日志 = 日志
+                pyglet.text.Label( # 显示服务器日志
+                    输出日志,
+                    x=3,
+                    y=15 * i + 3,
+                    color=(0, 0, 0),
+                    font_size=9
+                    ).draw()
+            i += 1
+        
+        pyglet.shapes.Rectangle( # 背景_客户端区域
+            x=window.width//2,
+            y=0,
+            width=window.width//2,
+            height=window.height,
+            color=(24, 65, 255)
+            ).draw()
+        pyglet.text.Label( # 显示客户端的标签
+            f"客户端'ALL'({len(Client["all"])})",
+            x=window.width//2,
+            y=window.height - 20,
+            color=(255, 255, 255)
+            ).draw()
+        i = 0
+        for 客户端 in Client["all"]:
+            pyglet.text.Label( # 显示客户端
+                f"{客户端.address}",
+                x=window.width//2,
+                y=85 + 20 * i,
+                color=(255, 255, 255)
+                ).draw()
+            i += 1
+        # --------------------------------------------------
+        pyglet.shapes.Rectangle( # 背景_性能区域
+            x=window.width//2,
+            y=0,
+            width=window.width//2,
+            height=80,
+            color=(0, 0, 0)
+            ).draw()
+        # 内存占用显示
+        pyglet.shapes.Rectangle( # 背景
+            x=window.width//2 + 5,
+            y=5,
+            width=5 * 100,
+            height=20,
+            color=(255, 255, 255)
+            ).draw()
+        pyglet.shapes.Rectangle( # 条
+            x=window.width//2 + 6,
+            y=6,
+            width=5 * 性能["ram"] - 2,
+            height=20 - 2,
+            color=(148, 119, 5)
+            ).draw()
+        pyglet.text.Label( # 文字
+            f"内存:{性能['ram']}%",
+            x=1 + window.width//2 + 5,
+            y=1 + 5,
+            color=(255, 255, 255)
+            ).draw()
+
+        # 存储占用显示
+        pyglet.shapes.Rectangle( # 背景
+            x=window.width//2 + 5,
+            y=5 + 25,
+            width=5 * 100,
+            height=20,
+            color=(255, 255, 255)
+            ).draw()
+        pyglet.shapes.Rectangle( # 条
+            x=window.width//2 + 6,
+            y=6 + 25,
+            width=5 * 性能["disk"] - 2,
+            height=20 - 2,
+            color=(16, 40, 138)
+            ).draw()
+        pyglet.text.Label( # 文字
+            f'存储:{性能["disk"]}%',
+            x=1 + window.width//2 + 5,
+            y=1 + 5 + 25,
+            color=(255, 255, 255)
+            ).draw()
+
+        # CPU占用显示
+        pyglet.shapes.Rectangle( # 背景
+            x=window.width//2 + 5,
+            y=5 + 50,
+            width=5 * 100,
+            height=20,
+            color=(255, 255, 255)
+            ).draw()
+        pyglet.shapes.Rectangle( # 条
+            x=window.width//2 + 6,
+            y=6 + 50,
+            width=5 * 性能["cpu"] - 2,
+            height=20 - 2,
+            color=(208, 32, 144)
+            ).draw()
+        pyglet.text.Label( # 文字
+            f"CPU:{性能["cpu"]}%",
+            x=1 + window.width//2 + 5,
+            y=1 + 5 + 50,
+            color=(255, 255, 255)
+            ).draw()
+        pyglet.clock.tick()
+    pyglet.app.run()
