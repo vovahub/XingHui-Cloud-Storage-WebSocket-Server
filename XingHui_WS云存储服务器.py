@@ -1,4 +1,3 @@
-# 该程序由15岁自学者初学半个多月开发,之后加上云变量同步逻辑,希望不要见笑了,很多写的东西简直是垃圾awa
 # 该项目的开源链接:https://github.com/vovahub/XingHui-Cloud-Storage-WebSocket-Server
 from SimpleWebSocketServer import SimpleWebSocketServer, WebSocket
 from threading import Thread
@@ -11,7 +10,7 @@ import psutil
 import random
 
 GUI = True
-服务器版本 = "0.1.6"
+服务器版本 = "0.1.7"
 服务器版本更新内容 = [
     "0.0.1_作者大脑褶皱被抚平🧠✋突然想做个主要面向图形化编程的好用的云存储,并打算用那微薄的python知识随便写一个MVP"
     "~0.0.4_刚完成正常功能,完成基础WS服务器+存储逻辑",
@@ -26,7 +25,8 @@ GUI = True
     "0.1.3_修复了'路径遍历攻击'漏洞;我的天十分抱歉我的电脑基础知识不够,已经修复了(QMQ没人说过还有回退路径这个玩法啊...EEE)",
     "0.1.4_修改了UAT格式让其支持自定义权限系统并在代码中支持Ciallo～(∠・ω< )⌒☆",
     "0.1.5_稍微修改了CV部分",
-    "0.1.6_开始学pyglet啦!所以随便写了一个GUI😋"
+    "0.1.6_开始学pyglet啦!所以随便写了一个GUI",
+    "0.1.7_修复了下GUI的部分问题,顺便加了一个连续运行时间,这或许会让运营者更加自豪"
 ]
 欢迎语 = '''~~~欢迎语👏and免责约言~~~
 欢迎接入星辉服务器！储纳之用，分文不取。诸君数据，必守秘如瓶。然稳妥计，还望自备密文加密之法为善。
@@ -56,6 +56,7 @@ print(r'''
   \/_/\/_/ \/_/ \/_/ \/_/ \/_____/ \/_/\/_/ \/_____/ \/_/ \/_/   \/_/ \/_____/
 ''')
 
+运行开始时间 = time.time()
 父目录 = "D:/"
 try:
     日志目录 = f"{父目录}XingHui_WS/log"
@@ -563,6 +564,13 @@ if GUI:
             f"CPU:{性能["cpu"]}%",
             x=1 + window.width//2 + 5,
             y=1 + 5 + 50,
+            color=(255, 255, 255)
+            ).draw()
+
+        pyglet.text.Label( # 文字
+            f"运行时间:{round((time.time()-运行开始时间)/60/60, 3)}小时",
+            x=1 + window.width//2 + 5,
+            y=1 + 5 + 50 + 25,
             color=(255, 255, 255)
             ).draw()
 
