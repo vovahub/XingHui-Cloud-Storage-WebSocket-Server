@@ -360,7 +360,7 @@ class MyServer(WebSocket):
                                 目标.sendMessage(json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False))
                             rizhi.info(f"[CV]为{i}个客户端广播了数据{json.dumps(RtCVS[该用户的UAT["token"]], ensure_ascii=False)}")
                         else:
-                            rizhi.warning(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})因整体数据大于32MB导致数据被忽略|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
+                            rizhi.warning(f"[CV_dump]客户端({self.address}|{该用户的UAT["token"]})因整体数据大于'{该用户的UAT["RtCVS_limit"]}'导致数据被忽略|变量'{接收数据_value[0]}'数据'{接收数据_value[1]}'")
                     # ---------客户端查阅信息---------
                     if 接收数据_key == "i_server":  # 查看服务器性能占用
                         需要减少可用次数 = False
@@ -589,3 +589,5 @@ if GUI:
             过渡性能[key] = 过渡(过渡性能[key], 性能[key], 15, dt)
     pyglet.clock.schedule_interval(过渡性能数据, 1/60.0)
     pyglet.app.run()
+
+# QSBjaGlsZCB3aG8gZGlkbuKAmXQgZml0IGluIG9uY2UgdHJpZWQgdG8gcHJvdmUgdGhlaXIgd29ydGgsIGJ1dCBwZXJoYXBzIGl0IHdhcyBhbGwgaW4gdmFpbjooLi4=
