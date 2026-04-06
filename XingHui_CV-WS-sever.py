@@ -1,4 +1,13 @@
 # 该项目的开源链接:https://github.com/vovahub/XingHui-Cloud-Storage-WebSocket-Server
+"""
+我很抱歉,作为一个自学python的孩子我的英文水平还做不到全部使用英文命名,这导致整个代码全是汉语,这或许很糟糕...:(
+请原谅我的不负责
+I am very sorry. As a child who is self-learning Python,
+my English level is not yet enough to use English names for everything, 
+which has resulted in the entire code being in Chinese. 
+This may be very bad... :(
+Please forgive my irresponsibility.
+"""
 from SimpleWebSocketServer import SimpleWebSocketServer, WebSocket
 from threading import Thread
 import json
